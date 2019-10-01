@@ -1,0 +1,170 @@
+---
+title: "Lab2"
+author: "Dayuan Wang"
+date: "Sep, 18, 2019"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+## 2.3.4 loading data
+To read data Auto into r data called 'Auto', then use fix() function to view it in a spreadsheet like window.
+```{r}
+library('ISLR')
+setwd('D:\\Lectures\\BIST0663\\Lec2\\datasets')
+Auto=read.table ("Auto.data ")
+fix(Auto)
+```
+Using the option header=T (or header=TRUE) in the read.table() function tells R that the first line of the file contains the variable names, and using the option na.strings tells R that any time it sees a particular character or set of characters (such as a question mark), it should be treated as a missing element of the data matrix.
+```{r}
+setwd('D:\\Lectures\\BIST0663\\Lec2\\datasets')
+Auto1=read.table ("Auto.data", header =T,na.strings ="?")
+fix(Auto1)
+```
+Excel is a common-format data storage program. An easy way to load such data into R is to save it as a csv (comma separated value) file and then use the read.csv() function to load it in.
+The dim() function tells us that the data has 397 observations, or rows, and nine variables, or columns.
+```{r}
+setwd('D:\\Lectures\\BIST0663\\Lec2\\datasets')
+Auto2=read.csv ("Auto.csv", header =T,na.strings ="?")
+fix(Auto2)
+dim(Auto2)
+Auto2 [1:4 ,]
+```
+There are various ways to deal with the missing data. In this case, only five of the rows contain missing observations, and so we choose to use the na.omit() function to simply remove these rows.
+```{r}
+Auto3=na.omit(Auto2)
+dim(Auto3)
+```
+Once the data are loaded correctly, we can use names() to check the variable names.
+```{r}
+names(Auto2)
+```
+## 2.3.5 additional graphical and numerical summaries
+```{r}
+plot(cylinders , mpg)
+```
+To refer to a variable, we must type the data set and the variable name joined with a $ symbol. Alternatively, we can use the attach() function in order to tell R to make the variables in this data frame available by name.
+```{r}
+plot(Auto1$cylinders , Auto1$mpg )
+attach (Auto1)
+plot(cylinders , mpg)
+```
+The cylinders variable is stored as a numeric vector, so R has treated it as quantitative. However, since there are only a small number of possible values for cylinders, one may prefer to treat it as a qualitative variable. The as.factor() function converts quantitative variables into qualitative variables.
+```{r}
+cylinders =as.factor (cylinders )
+```
+If the variable plotted on the x-axis is categorial, then boxplots will automatically be produced by the plot() function. As usual, a number of options can be specified in order to customize the plots.
+```{r}
+plot(cylinders , mpg)
+plot(cylinders , mpg , col ="red ")
+plot(cylinders , mpg , col ="red", varwidth =T)
+plot(cylinders , mpg , col ="red", varwidth =T,horizontal =T)
+plot(cylinders , mpg , col ="red", varwidth =T, xlab=" cylinders ",ylab ="MPG ")
+```
+The hist() function can be used to plot a histogram. Note that col=2 histogram has the same effect as col="red".
+```{r}
+hist(mpg)
+hist(mpg ,col =2)
+hist(mpg ,col =2, breaks =15)
+```
+The pairs() function creates a scatterplot matrix i.e. a scatterplot for every pair of variables for any given data set. We can also produce scatterplots for just a subset of the variables.
+```{r}
+pairs(Auto1)
+pairs(??? mpg + displacement + horsepower + weight + acceleration , Auto1)
+```
+In conjunction with the plot() function, identify() provides a useful interactive method for identifying the value for a particular variable for points on a plot. We pass in three arguments to identify(): the x-axis variable, the y-axis variable, and the variable whose values we would like to see printed for each point. Then clicking on a given point in the plot will cause R to print the value of the variable of interest. Right-clicking on the plot will exit the identify() function (control-click on a Mac). The numbers printed under the identify() function correspond to the rows for the selected points.
+```{r}
+plot(horsepower ,mpg)
+identify (horsepower ,mpg ,name)
+```
+The summary() function produces a numerical summary of each variable in a particular data set. 
+For qualitative variables such as name, R will list the number of observations that fall in each category. We can also produce a summary of just a single variable.
+```{r}
+summary (Auto1)
+summary (mpg)
+```
+we type q() in order to shut it down, or quit. Use savehistory() function to save history, loadhistory() function to load.
+
+##5.3.1 The validation set approach
+We begin by using the sample() function to split the set of observations into two halves, by selecting a random subset of 196 observations out of the original 392 observations.We refer to these observations as the training set.
+```{r}
+library (ISLR)
+set.seed (1)
+train=sample (392 ,196)
+lm.fit = lm(mpg ~ horsepower, data = Auto3, subset = train)
+```
+We now use the predict() function to estimate the response for all 392 observations, and we use the mean() function to calculate the MSE of the 196 observations in the validation set. Note that the -train index below selects only the observations that are not in the training set.
+Note: exclude observations with missing values firstly.
+```{r}
+
+mean((Auto3$mpg -predict (lm.fit ,Auto3))[-train ]^2)
+```
+Therefore, MSE of our linear regression is 26.14. We can use poly() function to estimate the test error for the quadratic and qubic regressions.
+```{r}
+lm.fit2=lm(mpg???poly(horsepower ,2) ,data=Auto3 ,subset =train )
+mean((Auto3$mpg -predict (lm.fit2 ,Auto3))[-train ]^2)
+
+lm.fit3=lm(mpg???poly(horsepower ,3) ,data=Auto3 ,subset =train )
+mean((Auto3$mpg -predict (lm.fit3 ,Auto3))[-train ]^2)
+```
+
+If we choose a different training set instead, then we will obtain somewhat different errors on the validation set.
+```{r}
+set.seed (2)
+train1=sample (392 ,196)
+
+lm.fit4 = lm(mpg ~ horsepower, data = Auto3, subset = train1)
+mean((Auto3$mpg -predict (lm.fit4 ,Auto3))[-train1 ]^2)
+
+lm.fit5=lm(mpg???poly(horsepower ,2) ,data=Auto3 ,subset =train1 )
+mean((Auto3$mpg -predict (lm.fit5 ,Auto3))[-train1 ]^2)
+
+lm.fit6=lm(mpg???poly(horsepower ,3) ,data=Auto3 ,subset =train1 )
+mean((Auto3$mpg -predict (lm.fit6 ,Auto3))[-train1 ]^2)
+```
+These results are consistent with our previous findings: a model that predicts mpg using a quadratic function of horsepower performs better than a model that involves only a linear function of horsepower, and there is little evidence in favor of a model that uses a cubic function of horsepower.
+
+##5.3.2 Leave-one-out cross-validation
+The LOOCV estimate can be automatically computed for any generalized linear model using the glm() and cv.glm() functions.
+If we use glm() to fit a model without passing in the family argument, then it performs linear regression, just like the lm() function. So for instance
+```{r}
+glm.fit=glm(mpg???horsepower ,data=Auto3)
+coef(glm.fit)
+
+lm.fit =lm(mpg???horsepower ,data=Auto3)
+coef(lm.fit)
+
+```
+In this lab, we will perform linear regression using the glm() function rather than the lm() function because the former can be used together with cv.glm(). The cv.glm() function is part of the boot library.
+```{r}
+library(boot)
+glm.fit=glm(mpg???horsepower ,data=Auto3)
+cv.err =cv.glm(Auto3 ,glm.fit)
+cv.err$delta
+```
+The cv.glm() function produces a list with several components. The two numbers in the delta vector contain the cross-validation results. In this case the numbers are identical (up to two decimal places) and correspond to the LOOCV statistic given in (5.1).
+
+We can repeat this procedure for increasingly complex polynomial fits. To automate the process, we use the for() function to initiate a for loop for loop which iteratively fits polynomial regressions for polynomials of order i = 1 to i = 5, computes the associated cross-validation error, and stores it in the ith element of the vector cv.error. We begin by initializing the vector. This command will likely take a couple of minutes to run.
+
+```{r}
+cv.error=rep (0,5)
+for (i in 1:5){
+glm.fit_cv=glm(mpg???poly(horsepower ,i),data=Auto3)
+cv.error[i]=cv.glm (Auto3 ,glm.fit_cv)$delta [1]
+}
+cv.error
+```
+we see a sharp drop in the estimated test MSE between the linear and quadratic fits, but then no clear improvement from using higher-order polynomials.
+## 5.3.3 k-fold cross-validation
+The cv.glm() function can also be used to implement k-fold CV. Below we use k = 10, a common choice for k, on the Auto data set. We once again set a random seed and initialize a vector in which we will store the CV errors corresponding to the polynomial fits of orders one to ten.
+```{r}
+set.seed (17)
+cv.error.10= rep (0 ,10)
+for (i in 1:10) {
+glm.fit=glm(mpg???poly(horsepower ,i),data=Auto3)
+cv.error.10[i]=cv.glm (Auto3 ,glm.fit ,K=10) $delta [1]
+}
+cv.error.10
+```
+Notice that the computation time is much shorter than that of LOOCV.

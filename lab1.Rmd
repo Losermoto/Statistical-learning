@@ -1,0 +1,38 @@
+---
+title: "BIST0663First Lab"
+author: "Dayuan Wang"
+output:
+  html_document:
+    df_print: paged
+---
+
+1. Hyperlink: 
+Where to upload lab works: [canvas](https://rutgers.instructure.com/courses/25794/assignments)
+
+2. Italic:
+*Italic*
+
+3. Insert code and its output *ctrl+alt+i*
+```{r}
+a <- rnorm(10000, mean = 5)
+b <- rpois(10000, lambda = 2)
+plot (a~b)
+```
+
+4. End a line with two spaces to start a new paragraph.  
+
+5. Insert formula:
+$$f(x)=X_0^2+\beta_1  X_1^2+\omega$$
+> block quote   
+* unordered list *
+item 2    
++ sub-item 1     
++ sub-item 2 
+
+6. Insert table:
+
+Table Header  | Second Header 
+------------- | ------------- 
+Table Cell    | Cell 2       
+Cell 3        | Cell 4        
+

@@ -1,0 +1,190 @@
+---
+title: "Lab 3"
+output: html_notebook
+author: "Dayuan Wang"
+date: "Sep, 23, 2019"
+
+---
+
+## 6.5.1 Best  subset selection
+
+Hitters is a data set in ISLR package.  
+fix() function to have a preview of the dataset. This function can also edit its value.  
+name() function can show all the variables of a dataframe.  
+```{r}
+
+library(ISLR)
+fix(Hitters)
+names(Hitters)
+```
+dim() function can show the dimentions of dataset.  
+is.na() function can identify missing observations. It returns a vector of the same length as the input vector, with a TRUE for any missing elements, and a FALSE for any non-missing elements.  
+```{r}
+dim(Hitters)
+sum(is.na(Hitters$Salary))
+```
+na.omit() function removes all the rows having missing values in any variable.  
+```{r}
+nomissing.Hitters <- na.omit(Hitters)
+dim(nomissing.Hitters)
+sum(is.na(nomissing.Hitters$Salary))
+```
+The regsubsets() function (part of the leaps library) performs best set selection by identifying the best model that contains a given number of predictors, where best is quantified using RSS. The syntax is the same as for lm(). The summary() command outputs the best set of variables for each model size.
+```{r}
+library(leaps)
+regfit.full <- regsubsets(Salary~., nomissing.Hitters)
+summary(regfit.full)
+```
+An asterisk $*$ indicates that a given variable is included in the corresponding model. For instance, this output indicates that the best two-variable model contains only **Hits** and **CRBI**. By default, regsubsets() only reports results up to the best eight-variable model. But the nvmax option can be used in order to return as many variables as are desired. Here we fit up to a 19-variable model.  
+```{r}
+regfit.full19 <- regsubsets(Salary~. , nomissing.Hitters, nvmax = 19)
+reg.summary <- summary(regfit.full19)
+```
+The summary() function also returns R^2^, RSS, adjusted R2, Cp, and BIC. We can examine these to try to select the best overall model.  
+```{r}
+names(reg.summary)
+```
+For instance, we see that the R2 statistic increases from 32%, when only one variable is included in the model, to almost 55 %, when all variables are included. As expected, the R2 statistic increases monotonically as more variables are included.  
+```{r}
+reg.summary$rsq
+```
+Plotting RSS, adjusted R2, Cp, and BIC for all of the models at once will help us decide which model to select. Note the type="l" option tells R to connect the plotted points with lines.  
+```{r}
+par(mfrow = c(1,2))
+plot(reg.summary$rss, xlab = 'number of variables', ylab = 'RSS', type = 'l')
+plot(reg.summary$adjr2, xlab = 'number of variables', ylab = 'adjusted r2', type = 'l')
+```
+The points() command works like the plot() command, except that it puts points on a plot that has already been created, instead of creating a new plot. The which.max() function can be used to identify the location of the maximum point of a vector. We will now plot a red dot to indicate the model with the largest adjusted R2 statistic.
+```{r}
+plot(reg.summary$adjr2, xlab = 'number of variables', ylab = 'adjusted r2', type = 'l')
+points (which.max(reg.summary$adjr2), max(reg.summary$adjr2), col ="red",cex =2, pch =20)
+which.max(reg.summary$adjr2)
+```
+In a similar fashion we can plot the Cp and BIC statistics, and indicate the models with the smallest statistic using which.min().
+```{r}
+plot(reg.summary$cp, xlab = 'number of variables', ylab = "mellow's cp", type = 'l')
+points (which.min (reg.summary$cp ), min(reg.summary$cp), col ="red",cex =2, pch =20)
+which.min(reg.summary$cp)
+```
+```{r}
+plot(reg.summary$bic, xlab = 'number of variables', ylab = "bic", type = 'l')
+points (which.min (reg.summary$bic ), min(reg.summary$bic), col ="red",cex =2, pch =20)
+which.min(reg.summary$bic)
+```
+The regsubsets() function has a built-in plot() command which can be used to display the selected variables for the best model with a given number of predictors, ranked according to the BIC, Cp, adjusted R2, or AIC.
+```{r}
+
+plot(regfit.full ,scale ="r2")
+plot(regfit.full ,scale ="adjr2")
+plot(regfit.full ,scale ="Cp")
+plot(regfit.full ,scale ="bic")
+```
+The top row of each plot contains a black square for each variable selected according to the optimal model associated with that statistic. For instance, we see that several models share a BIC close to ???150. However, the model with the lowest BIC is the six-variable model that contains only AtBat, Hits, Walks, CRBI, DivisionW, and PutOuts. We can use the coef() function to see the coefficient estimates associated with this model.  
+```{r}
+coef(regfit.full,6)
+```
+# 6.6 Ridge regression and lasso
+glmnet package is used. glmnet() function can fit both ridge regression and lasso regression (and more).  
+In particular, we must pass in an x matrix as well as a y vector, and we do not use the y ??? x syntax. We will now perform ridge regression and the lasso in order to predict Salary on the Hitters data. Before proceeding ensure that the missing values have been removed from the data.  
+```{r}
+x = model.matrix(Salary~., nomissing.Hitters)[,-1]
+y = nomissing.Hitters$Salary
+```
+The model.matrix() function is particularly useful for creating x; not only does it produce a matrix corresponding to the 19 predictors but it also automatically transforms any qualitative variables into dummy variables.  
+The latter property is important because glmnet() can only take numerical, quantitative inputs.  
+## 6.6.1 Ridge regression
+The glmnet() function has an alpha argument that determines what type of model is fit. If alpha=0 then a ridge regression model is fit, and if alpha=1 then a lasso model is fit.  
+```{r}
+library(glmnet)
+grid =10^ seq (10,-2, length =100)
+ridge.mod =glmnet(x,y,alpha =0, lambda =grid)
+```
+By default the glmnet() function performs ridge regression for an automatically selected range of $\lambda$ values. However, here we have chosen to implement the function over a grid of values ranging from $\lambda= 10^{10}$ to $\lambda= 10^{-2}$, essentially covering the full range of scenarios from the null model containing only the intercept, to the least squares fit. As we will see, we can also compute model fits for a particular value of $\lambda$ that is not one of the original grid values.  
+Note that by default, the glmnet() function standardizes the variables so that they are on the same scale.  
+To turn off this default setting, use the argument standardize=FALSE.
+Associated with each value of $\lambda$ is a vector of ridge regression coefficients, stored in a matrix that can be accessed by coef(). In this case, it is a 20?100 matrix, with 20 rows (one for each predictor, plus an intercept) and 100 columns (one for each value of $\lambda$).
+```{r}
+dim(coef(ridge.mod ))
+```
+We expect the coefficient estimates to be much smaller, in terms of $\ell_2$ norm, when a large value of $\lambda$ is used, as compared to when a small value of $\lambda$ is used.These are the coefficients when $\lambda = 11,498$, along with their $\ell_2$ norm.  
+[-1, 50] means that the first column of dataset is excluded. Here it is the coefficient for intercept.  
+Remember that intercept is not included in the penalty term.
+```{r}
+ridge.mod$lambda[50]
+sqrt(sum(coef(ridge.mod)[-1,50]^2))
+```
+In contrast, here are the coefficients when $\lambda = 705$, along with their $\ell_2$ norm. Note the much larger $\ell_2$ norm of the coefficients associated with this smaller value of $\lambda$.  
+$\ell_2$ increased from 6.36 to 57.11 as $\lambda$ decreased from 11498 to 705.
+```{r}
+ridge.mod$lambda[60]
+sqrt(sum(coef(ridge.mod)[-1,60]^2))
+```
+We can use the predict() function for a number of purposes. For instance, we can obtain the ridge regression coefficients for a new value of $\lambda$, say 50:  
+```{r}
+predict (ridge.mod, s=50, type ="coefficients")[1:20 ,]
+```
+We now split the samples into a training set and a test set in order to estimate the test error of ridge regression and the lasso. There are two common ways to randomly split a data set. The first is to produce a random vector of TRUE, FALSE elements and select the observations corresponding to TRUE for the training data. The second is to randomly choose a subset of numbers between 1 and n; these can then be used as the indices for the training observations.  
+```{r}
+set.seed(1)
+train <- sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+y.test <- y[test]
+```
+Next we fit a ridge regression model on the training set, and evaluate its MSE on the test set, using $\lambda =4$. Note the use of the predict() function again. This time we get predictions for a test set, by replacing type="coefficients" with the newx argument.
+```{r}
+ridge.mod1 = glmnet(x[train,],y[train],alpha = 0,lambda = grid, thresh = 1e-12)
+ridge.pred1 = predict(ridge.mod1, s = 4, newx = x[test,])
+mean((ridge.pred1 - y.test)^2)
+```
+The test MLE is 142199. Note that if we had instead simply fit a model with just an intercept we would have predicted each test ovservation using the mean of the training observations. In that case, we could compute the test MSE like:
+```{r}
+mean(( mean(y[train ])-y.test)^2)
+```
+We could also get the same result by fitting a ridge regression model with a very large value of $\lambda$, say 1e10.
+```{r}
+ridge.pred2 = predict(ridge.mod1, s = 1e10, newx = x[test,])
+mean((ridge.pred2-y.test)^2)
+```
+So fitting a ridge regression model with $\lambda =4$ leads to a much lower test MSE than fitting a model with just an intercept. We now check whether there is any benefit to performing ridge regression with $\lambda =4$ instead of just performing least squares regression. Recall that least squares is simply ridge regression with $\lambda =0$.
+```{r}
+ridge.pred3 = predict(ridge.mod1, s = 0, newx = x[test,])
+mean((ridge.pred3-y.test)^2)
+```
+In general, instead of arbitrarily choosing $\lambda=  4$, it would be better to use cross-validation to choose the tuning parameter  $\lambda$. We can do this using the built-in cross-validation function, cv.glmnet(). By default, the function performs ten-fold cross-validation, though this can be changed using the argument nfolds.
+```{r}
+set.seed(1)
+cv.out =cv.glmnet (x[train ,],y[train],alpha =0)
+plot(cv.out)
+bestlam =cv.out$lambda.min
+bestlam
+```
+If we change seed, the best $\lambda$ will also change.  
+Therefore, we see that the value of $\lambda$ that results in the smallest crossvalidation error is 212. What is the test MSE associated with this value of$\lambda$?
+```{r}
+ridge.pred=predict(ridge.mod1 ,s=bestlam ,newx=x[test ,])
+mean(( ridge.pred -y.test)^2)
+```
+This represents a further improvement over the test MSE that we got using$\lambda =4$. Finally, we refit our ridge regression model on the full data set, using the value of $\lambda$ chosen by cross-validation, and examine the coefficient estimates.
+## 6.6.2 The lasso
+We saw that ridge regression with a wise choice of $\lambda$ can outperform least squares as well as the null model on the Hitters data set. We now ask whether the lasso can yield either a more accurate or a more interpretable model than ridge regression. In order to fit a lasso model, we once again use the glmnet() function; however, this time we use the argument alpha=1. Other than that change, we proceed just as we did in fitting a ridge model.
+```{r}
+lasso.mod =glmnet (x[train ,],y[train],alpha =1, lambda =grid)
+plot(lasso.mod)
+```
+We can see from the coefficient plot that depending on the choice of tuning parameter, some of the coefficients will be exactly equal to zero. We now perform cross-validation and compute the associated test error.
+```{r}
+set.seed (1)
+cv.out =cv.glmnet (x[train,],y[train],alpha =1)
+plot(cv.out)
+bestlam =cv.out$lambda.min
+lasso.pred=predict (lasso.mod ,s=bestlam ,newx=x[test ,])
+mean(( lasso.pred -y.test)^2)
+
+```
+This is substantially lower than the test set MSE of the null model and of least squares, and very similar to the test MSE of ridge regression with $\lambda$ chosen by cross-validation.  
+However, the lasso has a substantial advantage over ridge regression in that the resulting coefficient estimates are sparse. Here we see that 12 of the 19 coefficient estimates are exactly zero. So the lasso model with $\lambda$ chosen by cross-validation contains only seven variables.
+```{r}
+out=glmnet (x,y,alpha =1, lambda =grid)
+lasso.coef=predict (out ,type ="coefficients",s=bestlam )[1:20 ,]
+lasso.coef
+```
