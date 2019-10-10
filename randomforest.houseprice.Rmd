@@ -1,0 +1,85 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(randomForest)
+library(dplyr)
+library(formattable)
+library(data.table)
+library(gbm)
+library(mice)
+library(leaps)
+library(glmnet)
+
+
+train <- read.csv(file = "D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\train.csv", header = T,stringsAsFactors=F)
+test <- read.csv(file = "D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\test.csv", header = T,stringsAsFactors=F)
+submission  <- read.csv(file="D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\sample_submission.csv",header = T,stringsAsFactors = F)
+
+```
+
+
+Deal with missing values
+```{r}
+
+
+predictor <- names(train)
+predictor <- predictor[predictor != "SalePrice"]
+print(predictor)
+for(i in predictor)
+{
+  if(any(is.na(train[[i]])))
+  {
+    print(paste(i,"-",class(train[[i]])))
+    if(is.character(train[[i]]))
+    {
+      train[[i]][is.na(train[[i]])] <- "_NA"
+    }
+    else
+    {
+      train[[i]][is.na(train[[i]])] <- mean(train[[i]],na.rm=TRUE)
+    }
+  }
+  if(any(is.na(test[[i]])))
+  {
+    if(is.character(test[[i]]))
+    {
+      test[[i]][is.na(test[[i]])] <- "_NA"
+    }
+    else
+    {
+      test[[i]][is.na(test[[i]])] <- mean(test[[i]],na.rm=TRUE)
+    }
+  }
+}
+
+
+```
+ Deal with factors
+```{r}
+
+for(i in predictor)
+{
+  if(is.character(train[[i]]))
+  {
+    levels <- sort(unique(c(train[[i]],test[[i]])))
+    train[[i]] <- factor(train[[i]],levels=levels)
+    test[[i]] <- factor(test[[i]],levels=levels)
+  }
+}
+
+randomforest <- randomForest(SalePrice~.,train[,-1],
+                   do.trace=TRUE)
+
+p <- predict(randomforest,test)
+submission$SalePrice <- p
+write.csv(submission,file="D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\randomforest.csv",row.names=FALSE)
+
+randomforest
+plot(randomforest)
+importance(randomforest)
+plot(randomforest, type = "l")
+varImpPlot(randomforest)
+```
+

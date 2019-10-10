@@ -1,0 +1,69 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(dplyr)
+library(formattable)
+library(data.table)
+library(gbm)
+library(mice)
+library(leaps)
+library(glmnet)
+```
+
+```{r}
+trainingdata = read.csv(file = "D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\train.csv", header = T,stringsAsFactors=TRUE,na.strings = "?")
+
+testdata = read.csv(file = "D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\test.csv", header = T,stringsAsFactors=TRUE,na.strings = "?")
+```
+
+
+```{r}
+testdata$SalePrice = 0
+train <- 1:1460
+all <- rbind(trainingdata, testdata)
+```
+
+
+
+```{r}
+
+training.x <- model.matrix(SalePrice~. ,all)[1:1460,-81]
+training.y <- all$SalePrice[1:1460]
+
+
+
+```
+
+```{r}
+test.x <- model.matrix(SalePrice~., all)[1461:2916,-81]
+
+all.x <- model.matrix(SalePrice~., all)[,-81]
+all.y <- all$SalePrice
+grid = 10^ seq (10,-2, length =100)
+
+
+lasso.mod =glmnet(all.x[train,] ,all.y[train],alpha =1, lambda = grid)
+plot(lasso.mod)
+
+```
+
+
+
+```{r}
+cv.out =cv.glmnet (all.x[train,] ,all.y[train], alpha =1, lambda = grid)
+plot(cv.out)
+```
+
+```{r}
+bestlam =cv.out$lambda.min
+lasso.pred <- predict(cv.out, newx = all.x[-train,], s= bestlam)
+
+lasso.coef <- predict(cv.out, type = "coefficient")
+
+
+
+write.csv(lasso.pred, file= "D:\\Lectures\\BIST0663\\house price\\house-prices-advanced-regression-techniques\\lasso.csv")
+```
+
